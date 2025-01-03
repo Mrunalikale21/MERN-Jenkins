@@ -1,39 +1,36 @@
 pipeline {
     agent any
-    tools {
-        nodejs "Node" // Ensure "Node" is the correct name configured in Jenkins
-    }
     environment {
-        SONAR_TOKEN = credentials('sonar-token') // Ensure 'sonar-token' credential exists in Jenkins
+        NODE_PATH='C:\Program Files\nodejs'
     }
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Mrunalikale21/MERN-Jenkins.git'
+                checkout scm
             }
         }
-        stage('Install Dependencies') {
+
+        stage('Build') {
             steps {
-                bat 'npm install'
+                bat '''
+                set PATH=%NODE_PATH%;%PATH%
+                npm install 
+                '''
             }
         }
-        stage('Install pm2') {
-            steps {
-                bat 'npm install pm2 -g'
-            }
-        }
+
         stage('SonarQube Analysis') {
+            environment {
+                SONAR_TOKEN = credentials('sonar-token') // Accessing the SonarQube token stored in Jenkins credentials
+            }
             steps {
-                withSonarQubeEnv('sonarqube') { // Ensure "sonarqube" matches the name configured in Jenkins
-                    bat """
-                    sonar-scanner \
-                      -Dsonar.projectKey=mern-jenkins \
-                      -Dsonar.sources=src \
-                      -Dsonar.host.url=http://localhost:9000 \
-                      -Dsonar.login=${SONAR_TOKEN}
-                    """
-                }
+                bat '''
+                set PATH=%NODE_PATH%;%PATH%
+                sonar-scanner -Dsonar.projectKey=mern-jenkins ^
+                -Dsonar.sources=. ^
+                -Dsonar.host.url=http://localhost:9000 ^
+                -Dsonar.token=%SONAR_TOKEN%
+                '''
             }
         }
     }
